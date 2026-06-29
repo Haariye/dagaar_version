@@ -1,197 +1,103 @@
 (function () {
     "use strict";
 
-    const DAGAAR_VERSION = {
-        title: "Dagaar ERP",
-        subtitle: "Healthcare & Business System",
-        version: "DH-2026.06.29",
-        edition: "Dagaar Healthcare Edition",
-        maintained_by: "Dagaar Technology",
-        support: "Work smarter. Grow stronger.",
-        footer: "Powered for hospitals, clinics, pharmacies, and business operations"
+    const DAGAAR_CONFIG = {
+        title: "About",
+        apps: [
+            { name: "Frappe Framework", version: "v16.23.1" },
+            { name: "ERPNext", version: "v16.22.0" }
+        ]
     };
 
-    function dagaarLogoSvg() {
-        return `
-            <svg width="76" height="76" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="76" height="76" rx="22" fill="url(#g)"/>
-                <path d="M20 20h18c12.2 0 21 7.6 21 18s-8.8 18-21 18H20V20Zm14 11v14h4c5 0 8.5-2.8 8.5-7S43 31 38 31h-4Z" fill="white"/>
-                <path d="M18 60h40" stroke="#FFB703" stroke-width="5" stroke-linecap="round"/>
-                <defs>
-                    <linearGradient id="g" x1="8" y1="8" x2="68" y2="68" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#0C2747"/>
-                        <stop offset="0.55" stop-color="#145F9C"/>
-                        <stop offset="1" stop-color="#20A4E8"/>
-                    </linearGradient>
-                </defs>
-            </svg>`;
+    let dagaar_dialog = null;
+
+    function isSystemManager() {
+        if (!window.frappe || !window.frappe.boot || !window.frappe.boot.user) return false;
+        const roles = window.frappe.boot.user.roles || [];
+        return roles.includes("System Manager");
     }
 
     function showDagaarVersionPopup() {
         if (!window.frappe) return;
 
+        // Prevent multiple instances
+        if (dagaar_dialog && dagaar_dialog.display) {
+            return;
+        }
+
         const html = `
             <style>
-                .dagaar-version-shell {
-                    margin: -10px -15px -15px -15px;
-                    border-radius: 24px;
-                    overflow: hidden;
-                    background: #071b32;
-                    color: #fff;
-                    font-family: Inter, Arial, sans-serif;
-                    box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+                .dagaar-v16-shell {
+                    margin: -15px;
+                    padding: 20px;
+                    background: var(--bg-color, #ffffff);
+                    color: var(--text-color, #1f2937);
+                    font-family: var(--font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
                 }
-                .dagaar-version-card {
-                    position: relative;
-                    overflow: hidden;
-                    padding: 28px;
-                    background:
-                        radial-gradient(circle at top right, rgba(255,183,3,0.32), transparent 32%),
-                        radial-gradient(circle at bottom left, rgba(32,164,232,0.35), transparent 34%),
-                        linear-gradient(135deg, #0c2747 0%, #145f9c 55%, #1f87c9 100%);
+                .dagaar-section-label {
+                    font-weight: 600;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--text-muted, #6b7280);
+                    margin-bottom: 12px;
                 }
-                .dagaar-version-watermark {
-                    position: absolute;
-                    right: -36px;
-                    bottom: -48px;
-                    font-size: 190px;
-                    font-weight: 900;
-                    line-height: 1;
-                    color: rgba(255,255,255,0.06);
-                    pointer-events: none;
-                }
-                .dagaar-version-top {
-                    position: relative;
-                    z-index: 2;
+                .dagaar-app-row {
                     display: flex;
                     justify-content: space-between;
-                    gap: 18px;
                     align-items: center;
+                    padding: 12px 15px;
+                    background: var(--card-bg, #ffffff);
+                    border: 1px solid var(--border-color, #e5e7eb);
+                    border-radius: 10px;
+                    margin-bottom: 8px;
+                    transition: border-color 0.2s;
                 }
-                .dagaar-version-brand {
-                    display: flex;
-                    gap: 16px;
-                    align-items: center;
+                .dagaar-app-row:hover {
+                    border-color: var(--primary-color, #171717);
                 }
-                .dagaar-version-logo {
-                    width: 76px;
-                    height: 76px;
-                    border-radius: 22px;
-                    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
-                    flex: 0 0 auto;
-                }
-                .dagaar-version-title {
-                    font-size: 28px;
-                    font-weight: 900;
-                    letter-spacing: .2px;
-                    line-height: 1.05;
-                }
-                .dagaar-version-subtitle {
-                    margin-top: 6px;
-                    font-size: 14px;
-                    opacity: .88;
-                }
-                .dagaar-version-badge {
-                    border-radius: 999px;
-                    padding: 9px 14px;
-                    font-size: 12px;
-                    font-weight: 900;
-                    color: #0c2747;
-                    background: linear-gradient(135deg, #ffd166, #ffb703);
-                    box-shadow: 0 8px 18px rgba(255,183,3,0.25);
-                    white-space: nowrap;
-                }
-                .dagaar-version-panel {
-                    position: relative;
-                    z-index: 2;
-                    margin-top: 22px;
-                    padding: 16px 18px;
-                    border: 1px solid rgba(255,255,255,0.18);
-                    border-radius: 18px;
-                    background: rgba(255,255,255,0.13);
-                    backdrop-filter: blur(8px);
-                }
-                .dagaar-version-row {
-                    display: flex;
-                    justify-content: space-between;
-                    gap: 18px;
-                    padding: 11px 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.16);
+                .dagaar-app-name {
+                    font-weight: 500;
                     font-size: 14px;
                 }
-                .dagaar-version-row:last-child {
-                    border-bottom: none;
-                }
-                .dagaar-version-row span {
-                    opacity: .84;
-                }
-                .dagaar-version-row b {
-                    text-align: right;
-                    font-weight: 800;
-                }
-                .dagaar-version-footer {
-                    position: relative;
-                    z-index: 2;
-                    margin-top: 16px;
-                    text-align: center;
+                .dagaar-app-ver {
+                    font-family: var(--font-mono, monospace);
                     font-size: 12px;
-                    opacity: .86;
-                }
-                .dagaar-version-menu-icon {
-                    display: inline-flex;
-                    width: 22px;
-                    height: 22px;
-                    border-radius: 7px;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 8px;
-                    color: #0c2747;
-                    background: #ffb703;
-                    font-weight: 900;
-                    font-size: 12px;
+                    background: var(--bg-light-gray, #f3f4f6);
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    color: var(--text-muted, #4b5563);
                 }
             </style>
 
-            <div class="dagaar-version-shell">
-                <div class="dagaar-version-card">
-                    <div class="dagaar-version-watermark">D</div>
-                    <div class="dagaar-version-top">
-                        <div class="dagaar-version-brand">
-                            <div class="dagaar-version-logo">${dagaarLogoSvg()}</div>
-                            <div>
-                                <div class="dagaar-version-title">${DAGAAR_VERSION.title}</div>
-                                <div class="dagaar-version-subtitle">${DAGAAR_VERSION.subtitle}</div>
-                            </div>
+            <div class="dagaar-v16-shell">
+                <div class="dagaar-section-label">Core Frameworks</div>
+                <div class="dagaar-apps-container">
+                    ${DAGAAR_CONFIG.apps.map(app => `
+                        <div class="dagaar-app-row">
+                            <span class="dagaar-app-name">${app.name}</span>
+                            <span class="dagaar-app-ver">${app.version}</span>
                         </div>
-                        <div class="dagaar-version-badge">CUSTOM BUILD</div>
-                    </div>
-
-                    <div class="dagaar-version-panel">
-                        <div class="dagaar-version-row"><span>Version</span><b>${DAGAAR_VERSION.version}</b></div>
-                        <div class="dagaar-version-row"><span>Edition</span><b>${DAGAAR_VERSION.edition}</b></div>
-                        <div class="dagaar-version-row"><span>Maintained By</span><b>${DAGAAR_VERSION.maintained_by}</b></div>
-                        <div class="dagaar-version-row"><span>Support</span><b>${DAGAAR_VERSION.support}</b></div>
-                    </div>
-
-                    <div class="dagaar-version-footer">${DAGAAR_VERSION.footer}</div>
+                    `).join('')}
                 </div>
             </div>
         `;
 
-        const dialog = new frappe.ui.Dialog({
-            title: "",
-            size: "large",
-            fields: [{ fieldtype: "HTML", fieldname: "dagaar_version_html" }]
+        dagaar_dialog = new frappe.ui.Dialog({
+            title: DAGAAR_CONFIG.title,
+            size: "small",
+            fields: [{ fieldtype: "HTML", fieldname: "dagaar_html" }]
         });
 
-        dialog.fields_dict.dagaar_version_html.$wrapper.html(html);
-        dialog.show();
-        dialog.$wrapper.find(".modal-header").hide();
-        dialog.$wrapper.find(".modal-content").css({ "border-radius": "24px", "overflow": "hidden" });
+        dagaar_dialog.fields_dict.dagaar_html.$wrapper.html(html);
+        dagaar_dialog.show();
+        
+        dagaar_dialog.$wrapper.find(".modal-title").html(DAGAAR_CONFIG.title);
+        dagaar_dialog.$wrapper.find(".modal-content").css({ "border-radius": "12px", "overflow": "hidden" });
     }
 
     function addDagaarVersionMenu() {
-        if (!window.jQuery) return;
+        if (!window.jQuery || !isSystemManager()) return;
 
         $(".dropdown-menu").each(function () {
             const $menu = $(this);
@@ -208,18 +114,20 @@
             if ($menu.find(".dagaar-version-menu-item").length) return;
 
             const item = `
-                <a class="dropdown-item dagaar-version-menu-item" href="#">
-                    <span class="dagaar-version-menu-icon">D</span>Dagaar Version
-                </a>
+                <li>
+                    <a class="dropdown-item dagaar-version-menu-item" href="#" onclick="return false;">
+                        <span class="dagaar-version-menu-icon"></span>About
+                    </a>
+                </li>
             `;
 
             const $sound = $menu.find("a:contains('Sound Settings'), button:contains('Sound Settings')").last();
             const $profile = $menu.find("a:contains('My Profile'), button:contains('My Profile')").last();
 
             if ($sound.length) {
-                $sound.after(item);
+                $sound.closest('li').after(item);
             } else if ($profile.length) {
-                $profile.after(item);
+                $profile.closest('li').after(item);
             } else {
                 $menu.prepend(item);
             }
@@ -228,27 +136,28 @@
 
     window.show_dagaar_version_popup = showDagaarVersionPopup;
 
-    $(document).on("click", ".dagaar-version-menu-item", function (e) {
+    // Use a namespaced click handler and prevent default/propagation properly
+    $(document).off("click.dagaar").on("click.dagaar", ".dagaar-version-menu-item", function (e) {
         e.preventDefault();
         e.stopPropagation();
         showDagaarVersionPopup();
+        return false;
     });
 
-    $(document).on("click shown.bs.dropdown", function () {
+    $(document).on("shown.bs.dropdown", function () {
         setTimeout(addDagaarVersionMenu, 80);
-        setTimeout(addDagaarVersionMenu, 300);
     });
 
     function startDagaarVersionLoader() {
+        if (!isSystemManager()) return;
+        
         addDagaarVersionMenu();
-        setTimeout(addDagaarVersionMenu, 1000);
-        setTimeout(addDagaarVersionMenu, 2500);
-
+        
         if (window.MutationObserver) {
             let timer = null;
             const observer = new MutationObserver(function () {
                 clearTimeout(timer);
-                timer = setTimeout(addDagaarVersionMenu, 120);
+                timer = setTimeout(addDagaarVersionMenu, 150);
             });
             observer.observe(document.body, { childList: true, subtree: true });
         }
